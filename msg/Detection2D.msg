@@ -1,0 +1,4 @@
+float32 confidence
+int32 class_id
+geometry_msgs/Point box_min
+geometry_msgs/Point box_max

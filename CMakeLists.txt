@@ -33,6 +33,8 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   image_transport
   sensor_msgs
+  message_generation
+  geometry_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -51,13 +53,6 @@ file(GLOB_RECURSE PLUGIN_SRCS ${PROJECT_SOURCE_DIR}/include/plugins/*.cu)
 # set(TENSORRT_LIB /usr/lib/aarch64-linux-gnu)
 # include_directories(/usr/include/aarch64-linux-gnu)
 
-catkin_package(
-  # INCLUDE_DIRS include include/utils include/plugins include/yolov5_trt
-  # LIBRARIES yolo_deploy_trt
-  # CATKIN_DEPENDS roscpp rospy std_msgs
-  # DEPENDS system_lib
-)
-
 include_directories(
   include
   include/yolov5_trt
@@ -69,6 +64,26 @@ include_directories(
 
 add_library(myplugins SHARED ${PLUGIN_SRCS})
 target_link_libraries(myplugins ${catkin_LIBRARIES} nvinfer cudart)
+
+# msg
+add_message_files(
+  FILES
+  Detection2D.msg
+  Detections2D.msg
+)
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  geometry_msgs
+)
+
+
+catkin_package(
+  # INCLUDE_DIRS include include/utils include/plugins include/yolov5_trt
+  # LIBRARIES yolo_deploy_trt
+  CATKIN_DEPENDS roscpp std_msgs sensor_msgs cv_bridge image_transport message_runtime
+  # DEPENDS system_lib
+)
 
 add_executable(yolov5 src/yolov5_trt_node.cpp src/yolov5_trt_ros.cpp ${UTILS})
 target_link_libraries(yolov5

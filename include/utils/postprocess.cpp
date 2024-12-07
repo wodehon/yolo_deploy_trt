@@ -79,7 +79,15 @@ void batch_nms(std::vector<std::vector<Detection>>& res_batch, float *output, in
   }
 }
 
-void draw_bbox(std::vector<cv::Mat>& img_batch, std::vector<std::vector<Detection>>& res_batch) {
+void draw_bbox(cv::Mat& img, std::vector<Detection>& res) {
+  for (size_t i = 0; i < res.size(); i++) {
+    cv::Rect r = get_rect(img, res[i].bbox);
+    cv::rectangle(img, r, cv::Scalar(0x27, 0xC1, 0x36), 2);
+    cv::putText(img, std::to_string((int)res[i].class_id), cv::Point(r.x, r.y - 1), cv::FONT_HERSHEY_PLAIN, 1.2, cv::Scalar(0xFF, 0xFF, 0xFF), 2);
+  }
+}
+
+void draw_bboxs(std::vector<cv::Mat>& img_batch, std::vector<std::vector<Detection>>& res_batch) {
   for (size_t i = 0; i < img_batch.size(); i++) {
     auto& res = res_batch[i];
     cv::Mat img = img_batch[i];
@@ -187,3 +195,59 @@ void draw_mask_bbox(cv::Mat& img, std::vector<Detection>& dets, std::vector<cv::
   }
 }
 
+std::string formatResults(const std::vector<Detection>& results) {
+    std::ostringstream oss;
+    for (size_t j = 0; j < results.size(); ++j) {
+        oss << "{class_id: " << results[j].class_id
+            << ", conf: " << results[j].conf
+            << ", bbox: [" << results[j].bbox[0] << ", " << results[j].bbox[1] 
+            << ", " << results[j].bbox[2] << ", " << results[j].bbox[3] << "]}";
+    }
+    return oss.str();
+}
+
+std::string formatBatchResults(const std::vector<std::vector<Detection>>& results) {
+    std::ostringstream oss;
+    for (size_t i = 0; i < results.size(); ++i) {
+        oss << "Batch " << i << ": [";
+        for (size_t j = 0; j < results[i].size(); ++j) {
+            const auto& det = results[i][j];
+            oss << "{class_id: " << det.class_id
+                << ", conf: " << det.conf
+                << ", bbox: [" << det.bbox[0] << ", " << det.bbox[1] 
+                << ", " << det.bbox[2] << ", " << det.bbox[3] << "]}, ";
+        }
+        oss << "]\n";
+    }
+    return oss.str();
+}
+
+void lowPassFilter(Detection& filtered, const Detection& raw, float alpha) {
+    filtered.bbox[0] = alpha * raw.bbox[0] + (1 - alpha) * filtered.bbox[0];
+    filtered.bbox[1] = alpha * raw.bbox[1] + (1 - alpha) * filtered.bbox[1];
+    filtered.bbox[2] = alpha * raw.bbox[2] + (1 - alpha) * filtered.bbox[2];
+    filtered.bbox[3] = alpha * raw.bbox[3] + (1 - alpha) * filtered.bbox[3];
+    filtered.conf = raw.conf;
+    filtered.class_id = raw.class_id;
+    // filtered.mask = raw.mask;
+    for ( size_t i = 0; i < 32; ++i) {
+      filtered.mask[i] = raw.mask[i];
+    }
+}
+
+// std::array<float, 4> firstOrderFilter(const std::array<float, 4>& previous_, const std::array<float, 4>& current) {
+//     for (size_t i = 0; i < 4; ++i) {
+//         previous_[i] = alpha_ * current[i] + (1 - alpha_) * previous_[i];
+//     }
+//     return previous_;
+// }
+
+// std::array<float, 4> secondOrderFilter(const std::array<float, 4>& current) {
+//   for (size_t i = 0; i < 4; ++i) {
+//     // 计算当前的速度估计值
+//     current[i] = beta_ * (current[i] - previous_[i]) + (1 - beta_) * velocity_[i];
+//     // 计算平滑后的值
+//     current[i] = alpha_ * (previous_[i] + velocity_[i]) + (1 - alpha_) * current[i];
+//   }
+//   return previous_;
+// }

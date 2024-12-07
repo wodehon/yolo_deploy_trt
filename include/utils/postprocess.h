@@ -9,8 +9,16 @@ void nms(std::vector<Detection>& res, float *output, float conf_thresh, float nm
 
 void batch_nms(std::vector<std::vector<Detection>>& batch_res, float *output, int batch_size, int output_size, float conf_thresh, float nms_thresh = 0.5);
 
-void draw_bbox(std::vector<cv::Mat>& img_batch, std::vector<std::vector<Detection>>& res_batch);
+void draw_bbox(cv::Mat& img, std::vector<Detection>& res);
+
+void draw_bboxs(std::vector<cv::Mat>& img_batch, std::vector<std::vector<Detection>>& res_batch);
 
 std::vector<cv::Mat> process_mask(const float* proto, int proto_size, std::vector<Detection>& dets);
 
 void draw_mask_bbox(cv::Mat& img, std::vector<Detection>& dets, std::vector<cv::Mat>& masks, std::unordered_map<int, std::string>& labels_map);
+
+std::string formatResults(const std::vector<Detection>& results);
+
+std::string formatBatchResults(const std::vector<std::vector<Detection>>& results);
+
+void lowPassFilter(Detection& filtered, const Detection& raw, float alpha);

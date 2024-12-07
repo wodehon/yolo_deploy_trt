@@ -1,5 +1,5 @@
 <launch>
-    <arg name="weight_path" default="$(find yolo_deploy_trt)/weights/yolov5s_wts.engine"/>
+    <arg name="weight_path" default="$(find yolo_deploy_trt)/weights/yolov5s_onnxsim_fp16_explicitBatch.engine"/>
     <node pkg="yolo_deploy_trt" type="yolov5" name="yolov5" output="screen">
         <!-- <param name="engine_file" value="../weights/yolov5_wts.engine"/> -->
         <param name="engine_file" value="$(arg weight_path)"/>

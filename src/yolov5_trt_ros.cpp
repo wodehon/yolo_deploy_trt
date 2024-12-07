@@ -13,12 +13,30 @@ YOLOv5::YOLOv5(const std::string& engine_name, ros::NodeHandle& nh)
     // Prepare CUDA buffers
     prepareBuffers();
 
+    // Get topic name from parameter or use default value
+    std::string image_topic;
+    nh.param<std::string>("image_topic", image_topic, "/camera/color/image_raw");
+
     // Initialize ROS subscribers and publishers
-    image_sub_ = nh.subscribe("/camera/color/image_raw", 1, &YOLOv5::imageCallback, this);
-    detection_pub_ = nh.advertise<std_msgs::String>("/yolov5/detections", 1);
+    image_sub_ = nh.subscribe(image_topic, 1, &YOLOv5::imageCallback, this);
+    detection_pub_ = nh.advertise<yolo_deploy_trt::Detections2D>("/yolov5/detections", 1);
+    img_res_pub_ = nh.advertise<sensor_msgs::Image>("/yolov5/detImg", 1);
 
     // Initialize CUDA preprocessing
     cuda_preprocess_init(kMaxInputImageSize);
+
+    // Initialize filter
+    // previous_ = {0.0f, 0.0f, 0.0f, 0.0f};
+    // velocity_ = {0.0f, 0.0f, 0.0f, 0.0f};
+    // filter_.bbox[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    // filter_.conf = 0.0f;
+    // filter_.class_id = 0.0f;
+    // for (int i = 0; i < 32; ++i) {
+    //     filter_.mask[i] = 0.0f;
+    // }
+    filter_ = {};
+
+    // OneEuroFilter f(frequency, mincutoff, beta, dcutoff);
 }
 
 YOLOv5::~YOLOv5() {
@@ -69,42 +87,100 @@ void YOLOv5::prepareBuffers() {
     CUDA_CHECK(cudaStreamCreate(&stream_));
 }
 
-void YOLOv5::infer(const cv::Mat& image, std::vector<std::vector<Detection>>& results) {
+void YOLOv5::infer(const cv::Mat& image, std::vector<Detection>& results) {
     // Preprocess the image
     std::vector<cv::Mat> img_batch = {image};
     cuda_batch_preprocess(img_batch, gpu_buffers_[0], kInputW, kInputH, stream_);
 
+    // // Run inference
+    // context_->enqueue(kBatchSize, (void**)gpu_buffers_, stream_, nullptr);
+
+    // for enqueueV2
+    // Set binding dimensions for dynamic input
+    int inputIndex = engine_->getBindingIndex(kInputTensorName); // 输入绑定名称
+    nvinfer1::Dims inputDims = context_->getBindingDimensions(inputIndex);
+    inputDims.d[0] = kBatchSize;  // Batch size，通常是 1
+    inputDims.d[1] = 3;           // 通道数（RGB）
+    inputDims.d[2] = kInputH;     // 输入高度（例如 640）
+    inputDims.d[3] = kInputW;     // 输入宽度（例如 640）
+    context_->setBindingDimensions(inputIndex, inputDims);
+
     // Run inference
-    context_->enqueue(kBatchSize, (void**)gpu_buffers_, stream_, nullptr);
+    context_->enqueueV2((void**)gpu_buffers_, stream_, nullptr);
 
     // Copy results to host
     CUDA_CHECK(cudaMemcpyAsync(cpu_output_buffer_, gpu_buffers_[1], kBatchSize * kOutputSize * sizeof(float), cudaMemcpyDeviceToHost, stream_));
     cudaStreamSynchronize(stream_);
 
     // Apply NMS
-    batch_nms(results, cpu_output_buffer_, 1, kOutputSize, kConfThresh, kNmsThresh);
+    // batch_nms(results, cpu_output_buffer_, 1, kOutputSize, kConfThresh, kNmsThresh); // std::vector<Detection>& results <-> std::vector<std::vector<Detection>>& results
+    nms(results, cpu_output_buffer_, kConfThresh, kNmsThresh);
 }
 
 void YOLOv5::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
     try {
         cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-        cv::Mat image = cv_ptr->image;
+        cv::Mat img = cv_ptr->image;
 
         // Perform inference
-        std::vector<std::vector<Detection>> results;
-        infer(image, results);
+        std::vector<Detection> results;
+        auto start = std::chrono::system_clock::now();
+        infer(img, results);
+        auto end = std::chrono::system_clock::now();
+        // std::cout << "inference time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+        ROS_INFO_STREAM("results:" << formatResults(results) << 
+            std::endl << "inference time: " << 
+            std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl);
+        if (results.size()!=0){
+                    lowPassFilter(filter_,results[0],0.5);
+        }
 
         // Publish results (as an example, we publish as JSON string)
-        std_msgs::String detection_msg;
-        detection_msg.data = "Detections: " + std::to_string(results[0].size());
-        detection_pub_.publish(detection_msg);
+        // std_msgs::String detection_msg;
+        // detection_msg.data = "Detections: " + std::to_string(results.size());
+        // detection_pub_.publish(detection_msg);
+
+        publish_detections(results);
 
         // Optionally, draw and save the results
-        std::vector<cv::Mat> img_batch = {image};
-        draw_bbox(img_batch, results);
-        cv::imwrite("result.jpg", image);
+        draw_bbox(img, results);
+        cv::Mat resized_img;
+        // cv::resize(img, resized_img, cv::Size(640, 480));
+        cv::resize(img, resized_img, cv::Size(), 0.3, 0.3); // 宽和高都缩小 50%
+        // cv::imshow("YOLOv5 Detection", resized_img);
+        // cv::waitKey(1); 
+        // cv::imwrite("result.jpg", img);
+        publish_detected_image(resized_img);
 
     } catch (cv_bridge::Exception& e) {
         ROS_ERROR("cv_bridge exception: %s", e.what());
     }
+}
+
+void YOLOv5::publish_detected_image(cv::Mat& img) {
+    // 将OpenCV图像转换为ROS图像消息
+    std_msgs::Header header;
+    header.stamp = ros::Time::now();
+    cv_bridge::CvImage cv_img(header, sensor_msgs::image_encodings::BGR8, img);
+    this->img_res_pub_.publish(cv_img.toImageMsg());
+}
+
+void YOLOv5::publish_detections(const std::vector<Detection>& results) {
+    yolo_deploy_trt::Detections2D msg;
+    msg.header.stamp = ros::Time::now();
+
+    for (const auto& det : results) {
+        yolo_deploy_trt::Detection2D detection;
+        detection.confidence = det.conf;
+        detection.class_id = det.class_id;
+
+        detection.box_min.x = det.bbox[0]-0.5*det.bbox[2];
+        detection.box_min.y = det.bbox[1]-0.5*det.bbox[3];
+        detection.box_max.x = det.bbox[0]+0.5*det.bbox[2];
+        detection.box_max.y = det.bbox[0]+0.5*det.bbox[2];
+
+        msg.detections.push_back(detection);
+    }
+
+    this->detection_pub_.publish(msg);
 }

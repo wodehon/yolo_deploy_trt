@@ -132,7 +132,7 @@ void YOLOv5::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
             std::endl << "inference time: " << 
             std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl);
         if (results.size()!=0){
-                    lowPassFilter(filter_,results[0],0.5);
+            lowPassFilter(filter_,results[0],0.5);
         }
 
         // Publish results (as an example, we publish as JSON string)

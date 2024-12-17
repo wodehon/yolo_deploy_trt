@@ -1,8 +1,10 @@
 <launch>
-    <arg name="weight_path" default="$(find yolo_deploy_trt)/weights/yolov5s_onnxsim_fp16_explicitBatch.engine"/>
+    <arg name="weight_path" default="$(find yolo_deploy_trt)/weights/yolov5s_wts.engine"/>
     <node pkg="yolo_deploy_trt" type="yolov5" name="yolov5" output="screen">
         <!-- <param name="engine_file" value="../weights/yolov5_wts.engine"/> -->
         <param name="engine_file" value="$(arg weight_path)"/>
-        <param name="image_topic" value="/camera/color/image_raw"/>
+        <param name="color_topic" value="/camera/color/image_raw"/>
+        <param name="depth_topic" value="/camera/aligned_depth_to_color/image_raw"/>
+        <param name="pose_topic" value="/mavros/local_position/pose"/>
     </node>
 </launch>

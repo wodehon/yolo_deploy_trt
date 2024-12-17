@@ -46,6 +46,9 @@ find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 find_package(CUDA REQUIRED)
 
+find_package(Eigen3 REQUIRED)
+include_directories(${EIGEN3_INCLUDE_DIR})
+
 file(GLOB_RECURSE UTILS ${PROJECT_SOURCE_DIR}/include/utils/*.cpp ${PROJECT_SOURCE_DIR}/include/utils/*.cu)
 file(GLOB_RECURSE PLUGIN_SRCS ${PROJECT_SOURCE_DIR}/include/plugins/*.cu)
 

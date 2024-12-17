@@ -1,6 +1,6 @@
 source /opt/ros/noetic/setup.zsh
 
-mkdir -p catkin_ws/src && cd catkin_ws
+mkdir -p catkin_ws/src && cd catkin_ws/src
 
 catkin_init_workspace
 

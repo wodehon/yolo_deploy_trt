@@ -77,11 +77,20 @@ private:
 
     // 新增的Publisher(根据python代码需求)
     ros::Publisher pose_pub_;
-    ros::Publisher tri_pub_;
+    ros::Publisher insulator_pub_;
     ros::Publisher tuning_pub_;
-    ros::Publisher error_pub_;
     ros::Publisher discover_pub_;
     ros::Publisher hover_pub_;
+    ros::Publisher tower_err_pub_;
+    ros::Publisher insulator_err_pub_;
+    ros::Publisher yolo_pub_;
+
+    // 立方体范围 exp(2.5f, 2.5f, 0.0f, 2.5f)  sim(40.0f, 40.0f, 0.0f, 29.99f)
+    // const float range_x = 2.5f;
+    // const float range_y = 2.5f;
+    // const float range_z_min = 0.0f;
+    // const float range_z_max = 2.5f;
+    const Eigen::Vector4f range = Eigen::Vector4f(40.0f, 40.0f, 0.0f, 29.99f);
 
     // 保存必要信息
     cv::Mat depth_img_;
@@ -95,19 +104,23 @@ private:
 
     // 状态变量(根据python代码逻辑)
     bool trigger_ = false;
-    bool triggertest_ = false;
+    bool pub_pose_ = false;
     float depth_min_ = 10000.0;
     int count_ = 0;
+    const float err_epsilon = 0.009;
 
     // 一些逻辑参数(需根据python逻辑调整)
-    float scale_ = 0.001;
-    float MAX_Z_ = 10000;
-    float wh_real_ = 4.0;
-    float distance_ = 1.0;
+    const float scale_ = 0.001;
+    const float MAX_Z_ = 100000; // sim 10000; exp 100000
+    const float wh_real_ = 4.0;
+    const float distance_ = 1.0;
 
     // 从参数服务器获取话题名称和Engine文件
     std::string engine_file_;
     std::string image_topic_;
+    std::string depth_topic_;
+    std::string pose_topic_;
+    std::string camera_info_topic_;
 
     // YOLO相关常量
     // 这些应在utils.h或model.h中定义。例如：

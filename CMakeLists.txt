@@ -10,10 +10,7 @@ set(CMAKE_BUILD_TYPE Debug)
 # TODO(Call for PR): make cmake compatible with Windows
 set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc)
 enable_language(CUDA)
-
-# For NVIDIA Jetson
-set(CMAKE_SYSTEM_PROCESSOR aarch64)
-set(CMAKE_CUDA_ARCHITECTURES "72")
+set(CMAKE_CUDA_ARCHITECTURES 75)
 
 # include and link dirs of cuda and tensorrt, you need adapt them if yours are different
 # cuda
@@ -21,11 +18,11 @@ include_directories(/usr/local/cuda/include)
 link_directories(/usr/local/cuda/lib64)
 # tensorrt
 # TODO(Call for PR): make TRT path configurable from command line
-include_directories(/usr/include/aarch64-linux-gnu/)
-link_directories(/usr/lib/aarch64-linux-gnu/)
+include_directories(/home/dev/code/TensorRT-8.6.1.6/include/)
+link_directories(/home/dev/code/TensorRT-8.6.1.6/lib/)
 
 # cv_bridge for opencv4.5.5
-set(cv_bridge_DIR /usr/local/share/cv_bridge/cmake)
+# set(cv_bridge_DIR /usr/local/share/cv_bridge/cmake)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy

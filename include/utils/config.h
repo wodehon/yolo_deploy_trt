@@ -17,7 +17,7 @@ const static char* kInputTensorName = "images";
 const static char* kOutputTensorName = "output";
 
 // Detection model and Segmentation model' number of classes
-constexpr static int kNumClass = 80;
+constexpr static int kNumClass = 2;
 
 // Classfication model's number of classes
 constexpr static int kClsNumClass = 1000;

@@ -349,7 +349,7 @@ void YOLOv5::handleDetections(cv::Mat &frame, const std::vector<Detection>& resu
                 std::cout << "pose_pub_ from yolo" << std::endl;
             }
 
-        } else if (pub_pose_ && class_id == 0 && conf > 0.7 && depth_m>1.0 && depth_m<6.0 && depth_m<depth_min_) {
+        } else if (pub_pose_ && class_id == 0 && conf > 0.7 && depth_m>1.0 && depth_m<2.0 && depth_m<depth_min_) {
             point_cam = px2xy(cx, cy, K_, D_, depth_m);
             point_body = camtobody(point_cam);
             point_world = bodytoworld(point_body, trans, R_w2b);

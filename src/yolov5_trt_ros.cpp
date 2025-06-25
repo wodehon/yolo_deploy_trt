@@ -159,7 +159,7 @@ void YOLOv5::cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr& msg) {
     if (K_.rows != 0 && K_.cols != 0)
         camera_info_received_ = true;
     D_ = cv::Mat(msg->D).clone();
-    ROS_INFO("Invalid camera matrix size: %dx%d", K_.rows, K_.cols);
+    ROS_INFO("Camera matrix size: %dx%d", K_.rows, K_.cols);
     // camera_info_received_ = true;
 }
 
@@ -238,7 +238,7 @@ void YOLOv5::handleDetections(cv::Mat &frame, const std::vector<Detection>& resu
     bool discover = false; // 是否发现物体(tower)
     // 机体姿态
     if (!pose_received_) {
-        ROS_INFO_STREAM("Waiting for uav_pose...");
+        // ROS_INFO_STREAM("Waiting for uav_pose...");
         return;
     }
     Eigen::Vector3f trans(current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);

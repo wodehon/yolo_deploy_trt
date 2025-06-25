@@ -1,9 +1,9 @@
 <launch>
-    <arg name="weight_path" default="$(find yolo_deploy_trt)/weights/sim_30.engine"/>
-    <arg name="color_topic" default="/camera/rgb/image_raw"/>
-    <arg name="depth_topic" default="/camera/depth/image_raw"/>
+    <arg name="weight_path" default="$(find yolo_deploy_trt)/weights/sim_31.engine"/>
+    <arg name="color_topic" default="/camera/color/image_raw"/>
+    <arg name="depth_topic" default="/camera/aligned_depth_to_color/image_raw"/>
     <arg name="pose_topic" default="/mavros/local_position/pose"/>
-    <arg name="camera_info_topic" default="/camera/rgb/camera_info"/>
+    <arg name="camera_info_topic" default="/camera/color/camera_info"/>
 
     <node pkg="yolo_deploy_trt" type="yolov5" name="yolov5" output="screen">
         <param name="engine_file" value="$(arg weight_path)"/>
